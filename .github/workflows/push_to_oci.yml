@@ -13,7 +13,8 @@ jobs:
 
       - name: Install OCI CLI
         run: |
-          bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)"
+          bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" --accept-all-defaults --install-dir /home/runner/oci
+          echo "/home/runner/oci/bin" >> $GITHUB_PATH
 
       - name: Configure OCI credentials
         env:
@@ -25,16 +26,27 @@ jobs:
         run: |
           mkdir -p ~/.oci
           echo "$OCI_CLI_KEY_BASE64" | base64 --decode > ~/.oci/oci_api_key.pem
-          oci setup oci-cli-rc \
-            --user-ocid "$OCI_CLI_USER" \
-            --tenancy-ocid "$OCI_CLI_TENANCY" \
-            --region "$OCI_CLI_REGION" \
-            --fingerprint "$OCI_CLI_FINGERPRINT" \
-            --key-file ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+          cat > ~/.oci/config << EOF
+          [DEFAULT]
+          user=${OCI_CLI_USER}
+          fingerprint=${OCI_CLI_FINGERPRINT}
+          tenancy=${OCI_CLI_TENANCY}
+          region=${OCI_CLI_REGION}
+          key_file=~/.oci/oci_api_key.pem
+          EOF
+          chmod 600 ~/.oci/config
 
       - name: Copy files to OCI bucket
+        env:
+          BUCKET_NAME: ${{ secrets.OCI_BUCKET_NAME }}
+          NAMESPACE: ${{ secrets.OCI_NAMESPACE }}
         run: |
           oci os object bulk-upload \
-            --bucket-name my-bucket-name \
-            --src-dir .
+            --namespace ${NAMESPACE} \
+            --bucket-name ${BUCKET_NAME} \
+            --src-dir . \
+            --exclude ".git/*" \
+            --exclude ".github/*" \
+            --no-follow-symlinks
 

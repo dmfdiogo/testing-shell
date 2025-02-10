@@ -47,30 +47,16 @@ jobs:
         with:
           name: dist
           path: dist
-      - name: Setup OCI CLI
-        run: |
-          curl -L -o install.sh https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
-          bash install.sh --accept-all-defaults
-          echo "$HOME/bin" >> $GITHUB_PATH
-          mkdir -p /home/runner/.oci
-          echo "$OCI_CLI_KEY_BASE64" | base64 -d > /home/runner/.oci/oci_api_key.pem
-          chmod 600 /home/runner/.oci/oci_api_key.pem
-          echo "[DEFAULT]
-          user=${OCI_CLI_USER}
-          fingerprint=${OCI_CLI_FINGERPRINT}
-          tenancy=${OCI_CLI_TENANCY}
-          region=${OCI_CLI_REGION}
-          key_file=/home/runner/.oci/oci_api_key.pem" > /home/runner/.oci/config
-        env:
-          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
-          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
-          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
-          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
-          OCI_CLI_KEY_BASE64: ${{ secrets.OCI_CLI_KEY_BASE64 }}
-      - name: Upload to OCI
-        run: |
-          export PATH=$PATH:$HOME/bin
-          oci os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir dist --object-prefix yvy-admin-ui/latest/
+
+      - name: Upload to OCI bucket
+        uses: oracle-actions/run-oci-cli-command@v1.3.2
+        with:
+          command: os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir dist --object-prefix yvy-admin-ui/latest/
+          private-key: ${{ secrets.OCI_CLI_KEY_BASE64 }}
+          fingerprint: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          tenancy: ${{ secrets.OCI_CLI_TENANCY }}
+          user: ${{ secrets.OCI_CLI_USER }}
+          region: ${{ secrets.OCI_CLI_REGION }}
         env:
           NAMESPACE: ${{ secrets.OCI_NAMESPACE }}
           BUCKET_NAME: ${{ secrets.OCI_BUCKET_NAME }}

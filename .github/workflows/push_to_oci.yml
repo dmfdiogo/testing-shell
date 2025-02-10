@@ -1,0 +1,40 @@
+name: Push to OCI Object Storage
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  push-to-bucket:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install OCI CLI
+        run: |
+          bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)"
+
+      - name: Configure OCI credentials
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_KEY_BASE64: ${{ secrets.OCI_CLI_KEY_BASE64 }}
+        run: |
+          mkdir -p ~/.oci
+          echo "$OCI_CLI_KEY_BASE64" | base64 --decode > ~/.oci/oci_api_key.pem
+          oci setup oci-cli-rc \
+            --user-ocid "$OCI_CLI_USER" \
+            --tenancy-ocid "$OCI_CLI_TENANCY" \
+            --region "$OCI_CLI_REGION" \
+            --fingerprint "$OCI_CLI_FINGERPRINT" \
+            --key-file ~/.oci/oci_api_key.pem
+
+      - name: Copy files to OCI bucket
+        run: |
+          oci os object bulk-upload \
+            --bucket-name my-bucket-name \
+            --src-dir .
+

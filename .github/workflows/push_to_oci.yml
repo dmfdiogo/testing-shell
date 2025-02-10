@@ -7,15 +7,20 @@ on:
 jobs:
   push-to-bucket:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      - name: Install OCI CLI
-        run: |
-          bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" --accept-all-defaults --install-dir /home/runner/oci
-          echo "/home/runner/oci/bin" >> $GITHUB_PATH
+      - name: Download OCI CLI install script
+        run: curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh -o install.sh
 
+      - name: Run OCI CLI install script
+        run: bash install.sh --accept-all-defaults --install-dir /home/runner/oci
+
+      - name: Add OCI CLI to PATH
+        run: echo "/home/runner/oci/bin" >> $GITHUB_PATH
+      
       - name: Configure OCI credentials
         env:
           OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}

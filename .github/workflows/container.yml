@@ -65,19 +65,24 @@ jobs:
           bash install.sh --accept-all-defaults
           echo "$HOME/bin" >> $GITHUB_PATH
           export PATH=$PATH:$HOME/bin
-          mkdir -p ~/.oci
-          echo "$OCI_CLI_KEY_BASE64" | base64 -d > ~/.oci/oci_api_key.pem
-          chmod 600 ~/.oci/oci_api_key.pem
+          
+          # Create directory with absolute path
+          mkdir -p /home/runner/.oci
+          
+          # Save key with absolute path
+          echo "$OCI_CLI_KEY_BASE64" | base64 -d > /home/runner/.oci/oci_api_key.pem
+          chmod 600 /home/runner/.oci/oci_api_key.pem
+          
+          # Create config with absolute path
           echo "[DEFAULT]
           user=${OCI_CLI_USER}
           fingerprint=${OCI_CLI_FINGERPRINT}
           tenancy=${OCI_CLI_TENANCY}
           region=${OCI_CLI_REGION}
-          key_file=~/.oci/oci_api_key.pem" > ~/.oci/config
-          chmod 600 ~/.oci/config
+          key_file=/home/runner/.oci/oci_api_key.pem" > /home/runner/.oci/config
+          chmod 600 /home/runner/.oci/config
           
-          # Verify OCI CLI installation
-          which oci || echo "OCI CLI not found in PATH"
+          ls -la /home/runner/.oci/
 
       - name: Upload to OCI
         run: |

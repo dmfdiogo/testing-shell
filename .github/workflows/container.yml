@@ -52,11 +52,11 @@ jobs:
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
           command: os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir dist --object-prefix yvy-admin-ui/latest/
-          private-key: ${{ secrets.OCI_CLI_KEY_BASE64 }}
-          fingerprint: ${{ secrets.OCI_CLI_FINGERPRINT }}
-          tenancy: ${{ secrets.OCI_CLI_TENANCY }}
-          user: ${{ secrets.OCI_CLI_USER }}
-          region: ${{ secrets.OCI_CLI_REGION }}
         env:
           NAMESPACE: ${{ secrets.OCI_NAMESPACE }}
           BUCKET_NAME: ${{ secrets.OCI_BUCKET_NAME }}
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_BASE64 }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}

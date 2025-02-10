@@ -63,6 +63,8 @@ jobs:
         run: |
           curl -L -o install.sh https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
           bash install.sh --accept-all-defaults
+          echo "$HOME/bin" >> $GITHUB_PATH
+          export PATH=$PATH:$HOME/bin
           mkdir -p ~/.oci
           echo "$OCI_CLI_KEY_BASE64" | base64 -d > ~/.oci/oci_api_key.pem
           chmod 600 ~/.oci/oci_api_key.pem
@@ -73,6 +75,11 @@ jobs:
           region=${OCI_CLI_REGION}
           key_file=~/.oci/oci_api_key.pem" > ~/.oci/config
           chmod 600 ~/.oci/config
+          
+          # Verify OCI CLI installation
+          which oci || echo "OCI CLI not found in PATH"
 
       - name: Upload to OCI
-        run: oci os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir . --exclude ".git/*" --exclude ".github/*"
+        run: |
+          export PATH=$PATH:$HOME/bin
+          oci os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir . --exclude ".git/*" --exclude ".github/*"

@@ -1,0 +1,36 @@
+{
+    "compilerOptions": {
+      // Build Options
+      "target": "ES2022",
+      "module": "ESNext",
+      "lib": ["DOM", "DOM.Iterable", "ESNext"],
+      "outDir": "./dist",
+      "rootDir": "./src",
+  
+      // Type Checking
+      "strict": true,
+      "noImplicitAny": true,
+      "strictNullChecks": true,
+      "noUnusedLocals": true,
+      "noUnusedParameters": true,
+  
+      // Module Resolution
+      "moduleResolution": "bundler",
+      "resolveJsonModule": true,
+      "isolatedModules": true,
+      "allowSyntheticDefaultImports": true,
+      "esModuleInterop": true,
+  
+      // React
+      "jsx": "react-jsx",
+      "jsxImportSource": "react",
+  
+      // Path Aliases
+      "baseUrl": ".",
+      "paths": {
+        "@/*": ["./src/*"]
+      }
+    },
+    "include": ["src"],
+    "exclude": ["node_modules", "dist"]
+  }

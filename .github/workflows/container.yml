@@ -46,6 +46,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   push-to-bucket:
+    needs: build
     runs-on: ubuntu-latest
     env:
       OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
@@ -59,17 +60,22 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist
+
       - name: Setup OCI CLI
-        uses: oracle-actions/setup-oci@v1
+        uses: oracle-actions/setup-oci-cli@v1
         with:
           user: ${{ secrets.OCI_CLI_USER }}
           fingerprint: ${{ secrets.OCI_CLI_FINGERPRINT }}
-          tenancy: ${{ secrets.OCI_TENANCY }}
-          region: ${{ secrets.OCI_REGION }}
+          tenancy: ${{ secrets.OCI_CLI_TENANCY }}
+          region: ${{ secrets.OCI_CLI_REGION }}
           api_key: ${{ secrets.OCI_CLI_KEY_BASE64 }}
 
       - name: Upload to OCI
-        run: oci os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir . --exclude ".git/*" --exclude ".github/*"
+        run: oci os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir dist --object-prefix yvy-admin-ui/latest/
         env:
           NAMESPACE: ${{ secrets.OCI_NAMESPACE }}
           BUCKET_NAME: ${{ secrets.OCI_BUCKET_NAME }}

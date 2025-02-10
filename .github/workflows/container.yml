@@ -44,3 +44,35 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  push-to-bucket:
+    runs-on: ubuntu-latest
+    env:
+      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_CLI_KEY_BASE64: ${{ secrets.OCI_CLI_KEY_BASE64 }}
+      BUCKET_NAME: ${{ secrets.OCI_BUCKET_NAME }}
+      NAMESPACE: ${{ secrets.OCI_NAMESPACE }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup OCI CLI
+        run: |
+          curl -L -o install.sh https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
+          bash install.sh --accept-all-defaults
+          mkdir -p ~/.oci
+          echo "$OCI_CLI_KEY_BASE64" | base64 -d > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+          echo "[DEFAULT]
+          user=${OCI_CLI_USER}
+          fingerprint=${OCI_CLI_FINGERPRINT}
+          tenancy=${OCI_CLI_TENANCY}
+          region=${OCI_CLI_REGION}
+          key_file=~/.oci/oci_api_key.pem" > ~/.oci/config
+          chmod 600 ~/.oci/config
+
+      - name: Upload to OCI
+        run: oci os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir . --exclude ".git/*" --exclude ".github/*"

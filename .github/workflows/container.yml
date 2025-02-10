@@ -4,58 +4,73 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '**'
   workflow_dispatch:
-
-defaults:
-  run:
-    working-directory: ./
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
-
       - run: npm install
       - run: npm run build
         env:
           PRODUCTION_DOMAIN: ${{ secrets.PRODUCTION_DOMAIN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+  deploy-aws:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: sa-east-1
-
       - run: aws s3 sync dist s3://${{ secrets.AWS_S3_BUCKET_NAME }}/yvy-admin-ui/latest
-        env:
-            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
       - run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID }} --paths "/yvy-admin-ui/latest/index.html"
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Setup OCI CLI
-        uses: oracle-actions/setup-oci-cli@v1
+  deploy-oci:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          user: ${{ secrets.OCI_CLI_USER }}
-          fingerprint: ${{ secrets.OCI_CLI_FINGERPRINT }}
-          tenancy: ${{ secrets.OCI_CLI_TENANCY }}
-          region: ${{ secrets.OCI_CLI_REGION }}
-          api_key: ${{ secrets.OCI_CLI_KEY_BASE64 }}
-
+          name: dist
+          path: dist
+      - name: Setup OCI CLI
+        run: |
+          curl -L -o install.sh https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
+          bash install.sh --accept-all-defaults
+          echo "$HOME/bin" >> $GITHUB_PATH
+          mkdir -p /home/runner/.oci
+          echo "$OCI_CLI_KEY_BASE64" | base64 -d > /home/runner/.oci/oci_api_key.pem
+          chmod 600 /home/runner/.oci/oci_api_key.pem
+          echo "[DEFAULT]
+          user=${OCI_CLI_USER}
+          fingerprint=${OCI_CLI_FINGERPRINT}
+          tenancy=${OCI_CLI_TENANCY}
+          region=${OCI_CLI_REGION}
+          key_file=/home/runner/.oci/oci_api_key.pem" > /home/runner/.oci/config
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_CLI_KEY_BASE64: ${{ secrets.OCI_CLI_KEY_BASE64 }}
       - name: Upload to OCI
-        run: oci os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir dist --object-prefix yvy-admin-ui/latest/
+        run: |
+          export PATH=$PATH:$HOME/bin
+          oci os object bulk-upload --namespace ${NAMESPACE} --bucket-name ${BUCKET_NAME} --src-dir dist --object-prefix yvy-admin-ui/latest/
         env:
           NAMESPACE: ${{ secrets.OCI_NAMESPACE }}
           BUCKET_NAME: ${{ secrets.OCI_BUCKET_NAME }}
